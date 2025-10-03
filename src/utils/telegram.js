@@ -27,8 +27,9 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function sendTelegramMessage({ text, parseMode = 'HTML' }) {
+export async function sendTelegramMessage({ text, parseMode = 'HTML', chatId = null }) {
   const url = `${TELEGRAM_API_BASE}/bot${config.telegram.botToken}/sendMessage`;
+  const targetChatId = chatId || config.telegram.chatId;
 
   // Split message if too long
   if (text.length > MAX_MESSAGE_LENGTH) {
@@ -54,21 +55,22 @@ export async function sendTelegramMessage({ text, parseMode = 'HTML' }) {
 
     // Send each part
     for (let i = 0; i < parts.length; i++) {
-      await sendSingleMessage({ text: parts[i], parseMode }, i + 1, parts.length);
+      await sendSingleMessage({ text: parts[i], parseMode, chatId: targetChatId }, i + 1, parts.length);
       if (i < parts.length - 1) {
         await sleep(500); // Small delay between messages
       }
     }
   } else {
-    await sendSingleMessage({ text, parseMode });
+    await sendSingleMessage({ text, parseMode, chatId: targetChatId });
   }
 }
 
-async function sendSingleMessage({ text, parseMode }, partNumber = null, totalParts = null) {
+async function sendSingleMessage({ text, parseMode, chatId }, partNumber = null, totalParts = null) {
   const url = `${TELEGRAM_API_BASE}/bot${config.telegram.botToken}/sendMessage`;
+  const targetChatId = chatId || config.telegram.chatId;
 
   const payload = {
-    chat_id: config.telegram.chatId,
+    chat_id: targetChatId,
     text: text,
     parse_mode: parseMode,
     disable_web_page_preview: false
@@ -87,7 +89,7 @@ async function sendSingleMessage({ text, parseMode }, partNumber = null, totalPa
 
       logger.info({
         messageId: response.data.result.message_id,
-        chatId: config.telegram.chatId
+        chatId: targetChatId
       }, `Telegram message sent successfully ${messageInfo}`);
 
       return response.data;
@@ -121,7 +123,8 @@ async function sendSingleMessage({ text, parseMode }, partNumber = null, totalPa
   throw lastError;
 }
 
-export function formatReleaseMessage({ name, tagName, htmlUrl, body, publishedAt, author }) {
+export function formatReleaseMessage({ repoName, name, tagName, htmlUrl, body, publishedAt, author }) {
+  const escapedRepoName = escapeHtml(repoName);
   const escapedName = escapeHtml(name || tagName);
   const escapedTag = escapeHtml(tagName);
   const escapedAuthor = escapeHtml(author);
@@ -133,9 +136,10 @@ export function formatReleaseMessage({ name, tagName, htmlUrl, body, publishedAt
     day: 'numeric'
   });
 
-  const changelog = body ? escapeHtml(truncateChangelog(body)) : '<i>No changelog provided</i>';
+  const maxLength = config.message?.maxChangelogLength || 2500;
+  const changelog = body ? escapeHtml(truncateChangelog(body, maxLength)) : '<i>No changelog provided</i>';
 
-  return `🚀 <b>New Release</b>: codex-cli <code>${escapedTag}</code>
+  return `🚀 <b>${escapedRepoName}</b> — new release <code>${escapedTag}</code>
 
 📅 Published by ${escapedAuthor} on ${formattedDate}
 

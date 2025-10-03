@@ -3,8 +3,26 @@ import { config } from './config.js';
 import { logger } from './logger.js';
 import { verifyGitHubSignature } from './middleware/verifySignature.js';
 import { handleReleaseEvent } from './handlers/releaseHandler.js';
+import {
+  getStats,
+  listRepositories,
+  triggerDiscovery,
+  triggerWebhookSync
+} from './handlers/adminHandler.js';
+import {
+  initDatabase,
+  upsertRepository,
+  closeDatabase,
+  updateWebhookStatus
+} from './storage/database.js';
+import { discoverAllRepositories } from './services/discovery.js';
+import { syncAllWebhooks } from './services/webhook.js';
+import { startPolling, stopPolling } from './services/polling.js';
 
 const app = express();
+
+// Initialize database on startup
+initDatabase();
 
 // Middleware to capture raw body for signature verification
 app.use(express.json({
@@ -20,17 +38,30 @@ app.get('/healthz', (req, res) => {
 
 app.get('/', (req, res) => {
   res.status(200).json({
-    name: 'GitHub Release Telegram Bot',
+    name: 'GitHub Release Telegram Bot (Multi-Repo)',
+    version: '2.0.0',
     status: 'running',
     endpoints: {
       health: '/healthz',
-      webhook: '/webhook/github/releases'
+      webhook: '/webhook/github/releases',
+      admin: {
+        stats: '/admin/stats',
+        repositories: '/admin/repositories',
+        discover: 'POST /admin/discover',
+        syncWebhooks: 'POST /admin/sync-webhooks'
+      }
     }
   });
 });
 
 // GitHub webhook endpoint
 app.post('/webhook/github/releases', verifyGitHubSignature, handleReleaseEvent);
+
+// Admin endpoints
+app.get('/admin/stats', getStats);
+app.get('/admin/repositories', listRepositories);
+app.post('/admin/discover', triggerDiscovery);
+app.post('/admin/sync-webhooks', triggerWebhookSync);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -50,27 +81,79 @@ app.use((req, res) => {
 });
 
 // Start server
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, async () => {
   logger.info({
     port: config.port,
-    repoOwner: config.github.repoOwner,
-    repoName: config.github.repoName
+    profiles: config.profiles.length,
+    webhookBaseUrl: config.webhookBaseUrl
   }, 'GitHub Release Telegram Bot started successfully');
+
+  // Run initial discovery and webhook sync
+  try {
+    logger.info('Running initial repository discovery...');
+    const repos = await discoverAllRepositories();
+
+    for (const repo of repos) {
+      upsertRepository(repo);
+    }
+
+    logger.info({ count: repos.length }, 'Initial repository discovery completed');
+
+    // Sync webhooks
+    if (config.github.apiToken) {
+      logger.info('Syncing webhooks for discovered repositories...');
+      const results = await syncAllWebhooks(repos);
+      logger.info(results, 'Initial webhook sync completed');
+    } else {
+      logger.warn('No GitHub API token configured, skipping webhook setup');
+
+      // Mark repositories so polling picks them up immediately
+      for (const repo of repos) {
+        try {
+          updateWebhookStatus(repo.fullName, null, 'unsupported');
+        } catch (statusError) {
+          logger.error({
+            error: statusError.message,
+            fullName: repo.fullName
+          }, 'Failed to flag repository for polling fallback');
+        }
+      }
+    }
+
+    // Start polling scheduler
+    startPolling();
+
+  } catch (error) {
+    logger.error({
+      error: error.message,
+      stack: error.stack
+    }, 'Failed during initial setup');
+  }
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
-  });
-});
+async function shutdown() {
+  logger.info('Shutting down gracefully...');
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
+  // Stop polling
+  stopPolling();
+
+  // Close server
   server.close(() => {
     logger.info('Server closed');
+
+    // Close database
+    closeDatabase();
+
     process.exit(0);
   });
-});
+
+  // Force exit after 10 seconds
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

@@ -1,0 +1,16 @@
+{
+  "profiles": [
+    {
+      "url": "https://github.com/openai",
+      "chatId": null,
+      "include": ["codex", "gpt*"],
+      "exclude": ["*-docs"]
+    },
+    {
+      "url": "https://github.com/microsoft",
+      "chatId": "-1001234567890",
+      "include": ["*"],
+      "exclude": ["archived-*", "*-test"]
+    }
+  ]
+}

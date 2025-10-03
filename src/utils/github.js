@@ -17,11 +17,11 @@ function getHeaders() {
   return headers;
 }
 
-export async function fetchReleaseDetails(releaseId) {
+export async function fetchReleaseDetails(releaseId, owner, repo) {
   try {
-    const url = `${GITHUB_API_BASE}/repos/${config.github.repoOwner}/${config.github.repoName}/releases/${releaseId}`;
+    const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/releases/${releaseId}`;
 
-    logger.debug({ releaseId, url }, 'Fetching release details from GitHub API');
+    logger.debug({ releaseId, owner, repo, url }, 'Fetching release details from GitHub API');
 
     const response = await axios.get(url, {
       headers: getHeaders(),
@@ -33,6 +33,8 @@ export async function fetchReleaseDetails(releaseId) {
     logger.error({
       error: error.message,
       releaseId,
+      owner,
+      repo,
       status: error.response?.status
     }, 'Failed to fetch release details from GitHub');
 
@@ -40,11 +42,11 @@ export async function fetchReleaseDetails(releaseId) {
   }
 }
 
-export async function fetchPreviousRelease(currentTagName) {
+export async function fetchPreviousRelease(currentTagName, owner, repo) {
   try {
-    const url = `${GITHUB_API_BASE}/repos/${config.github.repoOwner}/${config.github.repoName}/releases`;
+    const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/releases`;
 
-    logger.debug({ currentTagName }, 'Fetching previous releases');
+    logger.debug({ currentTagName, owner, repo }, 'Fetching previous releases');
 
     const response = await axios.get(url, {
       headers: getHeaders(),
@@ -66,6 +68,8 @@ export async function fetchPreviousRelease(currentTagName) {
   } catch (error) {
     logger.error({
       error: error.message,
+      owner,
+      repo,
       status: error.response?.status
     }, 'Failed to fetch previous releases');
 
@@ -73,11 +77,11 @@ export async function fetchPreviousRelease(currentTagName) {
   }
 }
 
-export async function generateChangelogFromCommits(baseTag, headTag) {
+export async function generateChangelogFromCommits(baseTag, headTag, owner, repo) {
   try {
-    const url = `${GITHUB_API_BASE}/repos/${config.github.repoOwner}/${config.github.repoName}/compare/${baseTag}...${headTag}`;
+    const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${baseTag}...${headTag}`;
 
-    logger.debug({ baseTag, headTag }, 'Generating changelog from commits');
+    logger.debug({ baseTag, headTag, owner, repo }, 'Generating changelog from commits');
 
     const response = await axios.get(url, {
       headers: getHeaders(),
@@ -103,6 +107,8 @@ export async function generateChangelogFromCommits(baseTag, headTag) {
       error: error.message,
       baseTag,
       headTag,
+      owner,
+      repo,
       status: error.response?.status
     }, 'Failed to generate changelog from commits');
 
