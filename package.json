@@ -1,0 +1,25 @@
+{
+  "name": "github-release-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot that sends notifications for GitHub releases from codex-cli repository",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest"
+  },
+  "keywords": ["telegram", "github", "webhook", "releases", "bot"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2",
+    "pino": "^8.16.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "eslint": "^8.55.0"
+  }
+}
