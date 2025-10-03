@@ -2,29 +2,47 @@
   "name": "github-release-telegram-bot",
   "version": "1.0.0",
   "description": "Telegram bot that sends notifications for GitHub releases from codex-cli repository",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "type": "module",
-  "keywords": ["telegram", "github", "webhook", "releases", "bot"],
+  "keywords": [
+    "telegram",
+    "github",
+    "webhook",
+    "releases",
+    "bot"
+  ],
   "author": "",
   "license": "MIT",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
     "test": "jest",
-    "admin:discover": "node src/cli/discover.js",
-    "admin:list-repos": "node src/cli/list-repos.js",
-    "admin:clear-cache": "node src/cli/clear-cache.js"
+    "admin:discover": "tsx src/cli/discover.ts",
+    "admin:list-repos": "tsx src/cli/list-repos.ts",
+    "admin:clear-cache": "tsx src/cli/clear-cache.ts"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "dotenv": "^16.3.1",
     "axios": "^1.6.2",
-    "pino": "^8.16.2",
     "better-sqlite3": "^9.2.2",
-    "node-cron": "^3.0.3"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3",
+    "pino": "^8.16.2"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.2",
+    "@types/node-cron": "^3.0.11",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^8.55.0",
     "nodemon": "^3.0.2",
-    "eslint": "^8.55.0"
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "zod": "^4.1.11"
   }
 }

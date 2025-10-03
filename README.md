@@ -177,19 +177,56 @@ openssl rand -hex 32
 2. Save it to your `.env` file
 3. The bot will use this when creating webhooks automatically
 
+## Development
+
+This project is written in **TypeScript** with 100% type safety.
+
+### Building the Project
+
+Compile TypeScript to JavaScript:
+
+```bash
+npm run build
+```
+
+This will generate compiled JavaScript in the `dist/` directory.
+
+### Type Checking
+
+Run TypeScript type checker without emitting files:
+
+```bash
+npm run typecheck
+```
+
+### Linting
+
+Check code quality:
+
+```bash
+npm run lint
+```
+
 ## Running the Bot
 
-### Development mode (with auto-reload):
+### Development mode (with auto-reload and TypeScript):
 
 ```bash
 npm run dev
 ```
 
+This uses `tsx` to run TypeScript directly with hot reload.
+
 ### Production mode:
 
+First build, then start:
+
 ```bash
+npm run build
 npm start
 ```
+
+This runs the compiled JavaScript from `dist/`.
 
 ### First Run
 
